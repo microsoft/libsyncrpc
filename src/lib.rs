@@ -1,6 +1,6 @@
 use std::{
   collections::HashMap,
-  io::{BufRead as _, BufReader, BufWriter, Lines, Write as _},
+  io::{BufRead, BufReader, BufWriter, Lines, Write as _},
   process::{Child, ChildStdin, ChildStdout},
 };
 
