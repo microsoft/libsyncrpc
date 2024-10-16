@@ -1,0 +1,9 @@
+[package]
+name = "libsyncrpc_mmap_channel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytecheck = "0.6.12"
+mmap-sync = "1.0.4"
+rkyv = "0.7.45"

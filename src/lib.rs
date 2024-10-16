@@ -1,21 +1,20 @@
-use std::{
-  collections::HashMap,
-  io::{BufRead, BufReader, BufWriter, Lines, Write as _},
-  process::{Child, ChildStdin, ChildStdout},
-  time::Duration,
-};
+use std::collections::HashMap;
 
-use bytecheck::CheckBytes;
-use mmap_sync::synchronizer::Synchronizer;
+use ipc_handler::IPCHandler;
 use napi::{
   bindgen_prelude::{Function, Result},
   Error,
 };
-use rkyv::{Archive, Deserialize, Serialize};
-use tempfile::TempDir;
+
+use crate::mmap::MmapIPC;
+use crate::socket_line::SocketLineIPC;
 
 #[macro_use]
 extern crate napi_derive;
+
+mod ipc_handler;
+mod mmap;
+mod socket_line;
 
 /// A synchronous RPC channel that allows JavaScript to synchronously call out
 /// to a child process and get a response over a simple tab-delimited protocol,
@@ -183,112 +182,6 @@ impl SyncRpcChannel {
   #[napi]
   pub fn murder_in_cold_blood(&mut self) -> Result<()> {
     self.ipc.close()?;
-    Ok(())
-  }
-}
-
-struct SocketLineIPC {
-  child: Child,
-  lines: Lines<BufReader<ChildStdout>>,
-  writer: BufWriter<ChildStdin>,
-}
-
-impl SocketLineIPC {
-  fn new(exe: String, args: Vec<String>) -> Result<Self> {
-    let mut child = std::process::Command::new(exe)
-      .stdin(std::process::Stdio::piped())
-      .stdout(std::process::Stdio::piped())
-      .args(args)
-      .spawn()?;
-
-    Ok(Self {
-      lines: BufReader::new(child.stdout.take().unwrap()).lines(),
-      writer: BufWriter::new(child.stdin.take().unwrap()),
-      child,
-    })
-  }
-}
-
-trait IPCHandler {
-  fn read_message(&mut self) -> Option<Result<String>>;
-  fn write_message(&mut self, ty: &str, name: &str, payload: &str) -> Result<()>;
-  fn close(&mut self) -> Result<()>;
-}
-
-impl IPCHandler for SocketLineIPC {
-  fn read_message(&mut self) -> Option<Result<String>> {
-    self.lines.next().map(|line| Ok(line?))
-  }
-
-  fn write_message(&mut self, ty: &str, name: &str, payload: &str) -> Result<()> {
-    self.writer.write_all(ty.as_bytes())?;
-    self.writer.write_all(b"\t")?;
-    self.writer.write_all(name.as_bytes())?;
-    self.writer.write_all(b"\t")?;
-    self.writer.write_all(payload.as_bytes())?;
-    self.writer.write_all(b"\n")?;
-    self.writer.flush()?;
-    Ok(())
-  }
-
-  fn close(&mut self) -> Result<()> {
-    self.child.kill()?;
-    Ok(())
-  }
-}
-
-struct MmapIPC {
-  child: Child,
-  reader_tmp: TempDir,
-  reader: Synchronizer,
-  writer_tmp: TempDir,
-  writer: Synchronizer,
-}
-
-impl MmapIPC {
-  fn new(exe: String, args: Vec<String>) -> Result<Self> {
-    let reader_tmp = TempDir::new()?;
-    let writer_tmp = TempDir::new()?;
-    let child = std::process::Command::new(exe).args(args).spawn()?;
-
-    Ok(Self {
-      child,
-      reader: Synchronizer::new(reader_tmp.path().join("reader").as_os_str()),
-      writer: Synchronizer::new(writer_tmp.path().join("writer").as_os_str()),
-      reader_tmp,
-      writer_tmp,
-    })
-  }
-}
-
-/// Example data-structure shared between writer and reader(s)
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-#[archive_attr(derive(CheckBytes))]
-struct MmapMsg(String);
-
-impl IPCHandler for MmapIPC {
-  fn read_message(&mut self) -> Option<Result<String>> {
-    let line = unsafe {
-      self
-        .reader
-        .read::<MmapMsg>(true)
-        .map_err(|e| Error::from_reason(format!("{e}")))
-    }
-    .map(|line| format!("{}", line.0));
-    Some(line)
-  }
-
-  fn write_message(&mut self, ty: &str, name: &str, payload: &str) -> Result<()> {
-    let data = MmapMsg(format!("{}\t{}\t{}", ty, name, payload));
-    self
-      .writer
-      .write(&data, Duration::from_secs(1))
-      .map_err(|e| Error::from_reason(format!("Failed to send mmap message: {e}")))?;
-    Ok(())
-  }
-
-  fn close(&mut self) -> Result<()> {
-    self.child.kill()?;
     Ok(())
   }
 }

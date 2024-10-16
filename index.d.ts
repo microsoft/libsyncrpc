@@ -5,12 +5,13 @@
 
 /**
  * A synchronous RPC channel that allows JavaScript to synchronously call out
- * to a child process and get a response over a line-based protocol,
+ * to a child process and get a response over a simple tab-delimited protocol,
  * including handling of JavaScript-side callbacks before the call completes.
  * For details on the protocol, see the `requestSync` method.
  */
 export declare class SyncRpcChannel {
-  constructor(exe: string, args: Array<string>)
+  static withLineProtocol(exe: string, args: Array<string>): SyncRpcChannel
+  static withMmapProtocol(exe: string, args: Array<string>): SyncRpcChannel
   /**
    * Send a request to the child process and wait for a response. The method
    * will not return, synchronously, until a response is received or an error
