@@ -7,7 +7,8 @@
  * A synchronous RPC channel that allows JavaScript to synchronously call out
  * to a child process and get a response over a line-based protocol,
  * including handling of JavaScript-side callbacks before the call completes.
- * For details on the protocol, see the `requestSync` method.
+ *
+ * For details on the protocol, see the `README.md`.
  */
 export declare class SyncRpcChannel {
   constructor(exe: string, args: Array<string>)
@@ -16,53 +17,7 @@ export declare class SyncRpcChannel {
    * will not return, synchronously, until a response is received or an error
    * occurs.
    *
-   * Requests follow a simple line-based protocol that communicates with the
-   * child process through the child's stdin and stdout streams.
-   *
-   * All payloads are expected to be pre-encoded `"`-delimited JSON strings
-   * on either end--this API does not do any of its own JSON
-   * encoding/decoding itself.
-   *
-   * #### Protocol
-   *
-   * The child should handle the following messages through its stdin:
-   *
-   * * `request	<method>	<payload>
-  `: a request to the child with the
-   *   given JSON `<payload>`, with `<method>` as the method name. The child
-   *   should send back any number of `call` messages and close the request
-   *   with either a `response` or `error` message.
-   * * `call-response	<name>	<payload>
-  `: a response to a `call` message
-   *   that the child previously sent. The `<payload>` is the encoded result
-   *   from invoking the JavaScript callback associated with it. If the
-   *   callback errors
-   * * `call-error	<name>	<message>
-  `: informs the child that an error
-   *   occurred. The `<message>` will simply be the stringified error, not
-   *   necessarily in JSON format. This method will also throw an error after
-   *   sending this message to its child and terminate the request call.
-   *
-   * The channel handles the following messages from the child's stdout:
-   *
-   * * `response	<method>	<payload>
-  `: a response to a request that the
-   *   call was for. `<payload>` will be the call's return value, and should
-   *   be a JSON-encoded string. `<method>` MUST match the `request`
-   *   message's `<method>` argument.
-   * * `error	<method>	<message>
-  `: a response that denotes some error
-   *   occurred while processing the request on the child side. The
-   *   `<message>` will be the stringified error, not necessarily in JSON
-   *   format. It will be used as the error message that this method will
-   *   throw (terminating the request). `<method>` MUST match the `request`
-   *   message's `<method>` argument.
-   * * `call	<name>	<payload>
-  `: a request to invoke a pre-registered
-   *   JavaScript callback (see `registerCallback`). `<name>` is the name of
-   *   the callback, and `<payload>` is the JSON-encoded string that the
-   *   callback will be called with. The child should then listen for
-   *   `call-response` and `call-error` messages.
+   * For details on the protocol, refer to `README.md`.
    */
   requestSync(method: string, payload: string): string
   /**
