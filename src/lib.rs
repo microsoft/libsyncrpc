@@ -89,13 +89,9 @@ impl SyncRpcChannel {
   ///   `call-response` and `call-error` messages.
   #[napi]
   pub fn request_sync(&mut self, method: String, payload: String) -> Result<String> {
-    self.writer.write_all(b"request\t")?;
-    self.writer.write_all(method.as_bytes())?;
-    self.writer.write_all(b"\t")?;
-    self.writer.write_all(payload.as_bytes())?;
-    self.writer.write_all(b"\n")?;
-    self.writer.flush()?;
-    for line in &mut self.lines {
+    self.write_message("request", &method, &payload)?;
+    // `while let` so we can still call `self.write_message()`, which needs `&mut self`.
+    while let Some(line) = self.lines.next() {
       let line = line?;
       let mut parts = line.splitn(3, '\t');
       let (ty, name, payload) = (
@@ -117,55 +113,45 @@ impl SyncRpcChannel {
           if name == method {
             return Ok(payload.to_string());
           } else {
-            return Err(Error::from_reason(
-              format!("name mismatch for response: expected `{method}`, got `{name}`"),
-            ));
+            return Err(Error::from_reason(format!(
+              "name mismatch for response: expected `{method}`, got `{name}`"
+            )));
           }
         }
         "error" => {
           if name == method {
             return Err(Error::from_reason(payload));
           } else {
-            return Err(Error::from_reason(
-              format!("name mismatch for response: expected `{method}`, got `{name}`"),
-            ));
+            return Err(Error::from_reason(format!(
+              "name mismatch for response: expected `{method}`, got `{name}`"
+            )));
           }
         }
         "call" => {
           if let Some(cb) = self.callbacks.get(name) {
             match cb.call((name.into(), payload.into())) {
               Ok(res) => {
-                self.writer.write_all(b"call-response\t")?;
-                self.writer.write_all(name.as_bytes())?;
-                self.writer.write_all(b"\t")?;
-                self.writer.write_all(res.trim().as_bytes())?;
-                self.writer.write_all(b"\n")?;
-                self.writer.flush()?;
+                self.write_message("call-response", name, res.trim())?;
               }
               Err(e) => {
-                self.writer.write_all(b"call-error\t")?;
-                self.writer.write_all(name.as_bytes())?;
-                self.writer.write_all(b"\t")?;
-                self.writer.write_all(format!("{e}").trim().as_bytes())?;
-                self.writer.write_all(b"\n")?;
-                self.writer.flush()?;
-                return Err(Error::from_reason(format!("Error calling callback `{name}`: {}", e)));
+                self.write_message("call-error", name, format!("{e}").trim())?;
+                return Err(Error::from_reason(format!(
+                  "Error calling callback `{name}`: {}",
+                  e
+                )));
               }
             }
           } else {
-            self.writer.write_all(b"call-error\t")?;
-            self.writer.write_all(name.as_bytes())?;
-            self.writer.write_all(b"\t")?;
-            self.writer.write_all(format!("unknown callback: `{name}`. Please make sure to register it on the JavaScript side before invoking it.").trim().as_bytes())?;
-            self.writer.write_all(b"\n")?;
-            self.writer.flush()?;
-            return Err(Error::from_reason(
-              format!("no callback named `{name}` found"),
-            ));
+            self.write_message("call-error", name, &format!("unknown callback: `{name}`. Please make sure to register it on the JavaScript side before invoking it."))?;
+            return Err(Error::from_reason(format!(
+              "no callback named `{name}` found"
+            )));
           }
         }
         _ => {
-          return Err(Error::from_reason(format!("Invalid message type from child: `{ty}`")));
+          return Err(Error::from_reason(format!(
+            "Invalid message type from child: `{ty}`"
+          )));
         }
       }
     }
@@ -180,7 +166,11 @@ impl SyncRpcChannel {
   /// If the callback throws, an it will be handled appropriately by
   /// `requestSync` and the child will be notified.
   #[napi]
-  pub fn register_callback(&mut self, name: String, cb: Function<'static, (String, String), String>) {
+  pub fn register_callback(
+    &mut self,
+    name: String,
+    cb: Function<'static, (String, String), String>,
+  ) {
     self.callbacks.insert(name, cb);
   }
 
@@ -189,6 +179,17 @@ impl SyncRpcChannel {
   #[napi]
   pub fn murder_in_cold_blood(&mut self) -> Result<()> {
     self.child.kill()?;
+    Ok(())
+  }
+
+  fn write_message(&mut self, ty: &str, name: &str, payload: &str) -> Result<()> {
+    self.writer.write_all(ty.as_bytes())?;
+    self.writer.write_all(b"\t")?;
+    self.writer.write_all(name.as_bytes())?;
+    self.writer.write_all(b"\t")?;
+    self.writer.write_all(payload.as_bytes())?;
+    self.writer.write_all(b"\n")?;
+    self.writer.flush()?;
     Ok(())
   }
 }
