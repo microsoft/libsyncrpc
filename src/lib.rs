@@ -1,12 +1,9 @@
 use std::{
-  collections::HashMap,
-  io::{BufRead, BufReader, BufWriter, Lines, Write as _},
-  process::{Child, ChildStdin, ChildStdout},
+  collections::HashMap, io::{BufRead, BufReader, BufWriter, Lines, Write as _}, process::{Child, ChildStdin, ChildStdout}
 };
 
 use napi::{
-  bindgen_prelude::{Function, Result},
-  Error,
+  bindgen_prelude::{Function, FunctionRef, Result}, Env, Error
 };
 
 #[macro_use]
@@ -22,7 +19,7 @@ pub struct SyncRpcChannel {
   child: Child,
   lines: Lines<BufReader<ChildStdout>>,
   writer: BufWriter<ChildStdin>,
-  callbacks: HashMap<String, Function<'static, (String, String), String>>,
+  callbacks: HashMap<String, FunctionRef<(String, String), String>>,
 }
 
 #[napi]
@@ -49,7 +46,7 @@ impl SyncRpcChannel {
   ///
   /// For details on the protocol, refer to `README.md`.
   #[napi]
-  pub fn request_sync(&mut self, method: String, payload: String) -> Result<String> {
+  pub fn request_sync(&mut self, env: Env, method: String, payload: String) -> Result<String> {
     if payload.contains('\n') {
       return Err(Error::from_reason(
         "payload must not contain `\n` characters",
@@ -95,7 +92,7 @@ impl SyncRpcChannel {
         }
         "call" => {
           if let Some(cb) = self.callbacks.get(name) {
-            match cb.call((name.into(), payload.into())) {
+            match cb.borrow_back(&env)?.call((name.into(), payload.into())) {
               Ok(res) => {
                 self.write_message("call-response", name, res.trim())?;
               }
@@ -136,8 +133,9 @@ impl SyncRpcChannel {
     &mut self,
     name: String,
     cb: Function<'static, (String, String), String>,
-  ) {
-    self.callbacks.insert(name, cb);
+  ) -> Result<()> {
+    self.callbacks.insert(name, cb.create_ref()?);
+    Ok(())
   }
 
   /// Does what it says on the tin. But you wouldn't do this to a _child_,
