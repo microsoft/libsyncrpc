@@ -30,7 +30,7 @@ test("throws if the child responds with an error", t => {
   const channel = makeChannel();
   t.throws(() => {
     channel.requestSync("error", "");
-  }, { message: '"something went wrong"' });
+  }, { code: "GenericFailure", message: '"something went wrong"' });
   channel.murderInColdBlood();
 });
 
