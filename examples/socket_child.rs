@@ -20,6 +20,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let three = call(&mut lines, "three", "3")?;
                 println!("response\tconcat\t\"{one}{two}{three}\"");
             }
+            ["request", "error", _] => {
+                println!("error\terror\t\"something went wrong\"");
+            }
+            ["request", "throw", _] => {
+                println!("call\tthrow\t\"\"");
+                let response = lines.next().expect("no response?")?;
+                let parts: Vec<&str> = response.split('\t').collect();
+                let ["call-error", "throw", _] = parts.as_slice() else {
+                    panic!("Unexpected response : {:?}", parts);
+                };
+                // Do nothing
+            }
             msg => {
                 panic!("Unexpected message : {:?}", msg);
             }
