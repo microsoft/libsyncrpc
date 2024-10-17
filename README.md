@@ -4,6 +4,28 @@ This is a `NAPI`-based NPM package that provides synchronous IPC/RPC using a
 simple line protocol. It uses [`NAPI-RS`](https://napi.rs) under the hood. See
 their site for more details as needed.
 
+### Example
+
+```typescript
+import { SyncRpcChannel } from "libsyncrpc";
+
+const channel = new SyncRpcChannel("node", "./myscript.js");
+
+channel.registerCallback("callMeMaybe", (method: string, payload: string) => {
+    console.log(`method '${method}' invoked 'callMeMaybe' callback`);
+    const parsed = JSON.parse(payload);
+    parsed.touched = true;
+    return JSON.stringify(parsed);
+});
+
+const result = channel.requestSync("echo", JSON.stringify({hello: "world"}));
+
+console.log(result); // { hello: "world", touched: true }
+
+// Remember to clean up after yourself!
+channel.murderInColdBlood();
+```
+
 ### Protocol
 
 Requests follow a simple line-based protocol that communicates with the
