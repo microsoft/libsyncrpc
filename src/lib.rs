@@ -228,7 +228,7 @@ impl SyncRpcChannel {
   }
 
   // Helper method to handle callback calls
-  fn handle_call<'a>(&mut self, env: &Env, name: &str, payload: &str) -> Result<()> {
+  fn handle_call(&mut self, env: &Env, name: &str, payload: &str) -> Result<()> {
     if let Some(cb) = self.callbacks.get(name) {
       match cb.borrow_back(env)?.call((name.into(), payload.into())) {
         Ok(res) => {
