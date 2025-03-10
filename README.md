@@ -26,6 +26,26 @@ console.log(result); // { hello: "world", touched: true }
 channel.murderInColdBlood();
 ```
 
+### Binary Data Example
+
+```typescript
+import { SyncRpcChannel } from "libsyncrpc";
+
+const channel = new SyncRpcChannel("node", "./myscript.js");
+
+// Request binary data from the child process
+const buffer = channel.requestBinarySync("getBinaryData", "{}");
+
+// The result is a proper Buffer that can be efficiently processed
+console.log(`Received ${buffer.length} bytes of binary data`);
+
+// You can directly work with the buffer, e.g., creating typed array views
+const int32View = new Int32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
+console.log(`First integer: ${int32View[0]}`);
+
+channel.murderInColdBlood();
+```
+
 ### Protocol
 
 Requests follow a simple line-based protocol that communicates with the
@@ -43,6 +63,8 @@ The child should handle the following messages through its `stdin`:
   given JSON `<payload>`, with `<method>` as the method name. The child
   should send back any number of `call` messages and close the request
   with either a `response` or `error` message.
+* `request-bin\t<method>\t<payload>\n`: a request for binary data from the child.
+  The child should send back a `response-bin` message with the binary data.
 * `call-response\t<name>\t<payload>\n`: a response to a `call` message
   that the child previously sent. The `<payload>` is the encoded result
   from invoking the JavaScript callback associated with it. If the
@@ -58,6 +80,11 @@ The channel handles the following messages from the child's `stdout`:
   call was for. `<payload>` will be the call's return value, and should
   be a JSON-encoded string. `<method>` MUST match the `request`
   message's `<method>` argument.
+* `response-bin\t<method>\t<size>\t<payload>\n`: a binary response to a request.
+  `<method>` MUST match the `request-bin` message's `<method>` argument. `<size>` is
+  the content-length in bytes of the binary `<payload>`. The library will validate
+  that the payload size matches the specified size. This format allows the payload
+  to contain any binary data, including newline characters.
 * `error\t<method>\t<message>\n`: a response that denotes some error
   occurred while processing the request on the child side. The
   `<message>` will be the stringified error, not necessarily in JSON

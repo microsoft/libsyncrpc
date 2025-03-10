@@ -12,6 +12,7 @@
  */
 export declare class SyncRpcChannel {
   constructor(exe: string, args: Array<string>)
+  requestBinarySync(method: string, payload: string): Buffer
   /**
    * Send a request to the child process and wait for a response. The method
    * will not return, synchronously, until a response is received or an error
