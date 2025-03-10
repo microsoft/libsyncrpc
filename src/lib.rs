@@ -84,34 +84,10 @@ impl SyncRpcChannel {
           }
         }
         "error" => {
-          if name == method {
-            return Err(Error::from_reason(size_or_payload));
-          } else {
-            return Err(Error::from_reason(format!(
-              "name mismatch for response: expected `{method}`, got `{name}`"
-            )));
-          }
+          return Err(self.create_error(name, size_or_payload, &method));
         }
         "call" => {
-          if let Some(cb) = self.callbacks.get(name) {
-            match cb.borrow_back(&env)?.call((name.into(), size_or_payload.into())) {
-              Ok(res) => {
-                self.write_message("call-response", name, res.trim())?;
-              }
-              Err(e) => {
-                self.write_message("call-error", name, format!("{e}").trim())?;
-                return Err(Error::from_reason(format!(
-                  "Error calling callback `{name}`: {}",
-                  e
-                )));
-              }
-            }
-          } else {
-            self.write_message("call-error", name, &format!("unknown callback: `{name}`. Please make sure to register it on the JavaScript side before invoking it."))?;
-            return Err(Error::from_reason(format!(
-              "no callback named `{name}` found"
-            )));
-          }
+          self.handle_call(&env, name, size_or_payload)?;
         }
         _ => {
           return Err(Error::from_reason(format!(
@@ -164,34 +140,10 @@ impl SyncRpcChannel {
           }
         }
         "error" => {
-          if name == method {
-            return Err(Error::from_reason(payload));
-          } else {
-            return Err(Error::from_reason(format!(
-              "name mismatch for response: expected `{method}`, got `{name}`"
-            )));
-          }
+          return Err(self.create_error(name, payload, &method));
         }
         "call" => {
-          if let Some(cb) = self.callbacks.get(name) {
-            match cb.borrow_back(&env)?.call((name.into(), payload.into())) {
-              Ok(res) => {
-                self.write_message("call-response", name, res.trim())?;
-              }
-              Err(e) => {
-                self.write_message("call-error", name, format!("{e}").trim())?;
-                return Err(Error::from_reason(format!(
-                  "Error calling callback `{name}`: {}",
-                  e
-                )));
-              }
-            }
-          } else {
-            self.write_message("call-error", name, &format!("unknown callback: `{name}`. Please make sure to register it on the JavaScript side before invoking it."))?;
-            return Err(Error::from_reason(format!(
-              "no callback named `{name}` found"
-            )));
-          }
+          self.handle_call(&env, name, payload)?;
         }
         _ => {
           return Err(Error::from_reason(format!(
@@ -262,5 +214,40 @@ impl SyncRpcChannel {
     }
     
     Ok(buf)
+  }
+
+  // Helper method to create an error
+  fn create_error(&self, name: &str, payload: &str, expected_method: &str) -> Error {
+    if name == expected_method {
+      Error::from_reason(payload)
+    } else {
+      Error::from_reason(format!(
+        "name mismatch for response: expected `{expected_method}`, got `{name}`"
+      ))
+    }
+  }
+
+  // Helper method to handle callback calls
+  fn handle_call<'a>(&mut self, env: &Env, name: &str, payload: &str) -> Result<()> {
+    if let Some(cb) = self.callbacks.get(name) {
+      match cb.borrow_back(env)?.call((name.into(), payload.into())) {
+        Ok(res) => {
+          self.write_message("call-response", name, res.trim())?;
+        }
+        Err(e) => {
+          self.write_message("call-error", name, format!("{e}").trim())?;
+          return Err(Error::from_reason(format!(
+            "Error calling callback `{name}`: {}",
+            e
+          )));
+        }
+      }
+    } else {
+      self.write_message("call-error", name, &format!("unknown callback: `{name}`. Please make sure to register it on the JavaScript side before invoking it."))?;
+      return Err(Error::from_reason(format!(
+        "no callback named `{name}` found"
+      )));
+    }
+    Ok(())
   }
 }
