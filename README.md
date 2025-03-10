@@ -22,27 +22,10 @@ const result = channel.requestSync("echo", JSON.stringify({hello: "world"}));
 
 console.log(result); // { hello: "world", touched: true }
 
+const buffer = channel.requestBinarySync("getRawData", "{}");
+console.log(buffer); // <Buffer 01 02 03 04 05 06 07 08 09 0a>
+
 // Remember to clean up after yourself!
-channel.murderInColdBlood();
-```
-
-### Binary Data Example
-
-```typescript
-import { SyncRpcChannel } from "libsyncrpc";
-
-const channel = new SyncRpcChannel("node", "./myscript.js");
-
-// Request binary data from the child process
-const buffer = channel.requestBinarySync("getBinaryData", "{}");
-
-// The result is a proper Buffer that can be efficiently processed
-console.log(`Received ${buffer.length} bytes of binary data`);
-
-// You can directly work with the buffer, e.g., creating typed array views
-const int32View = new Int32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
-console.log(`First integer: ${int32View[0]}`);
-
 channel.murderInColdBlood();
 ```
 

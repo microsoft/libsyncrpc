@@ -29,7 +29,7 @@ export declare class SyncRpcChannel {
    * If the callback throws, an it will be handled appropriately by
    * `requestSync` and the child will be notified.
    */
-  registerCallback(name: string, cb: (arg0: string, arg1: string) => arg: string): void
+  registerCallback(name: string, cb: (arg0: string, arg1: string) => string): void
   /**
    * Does what it says on the tin. But you wouldn't do this to a _child_,
    * would you? Just what kind of person are you?

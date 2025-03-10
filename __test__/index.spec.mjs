@@ -23,10 +23,10 @@ test("should handle binary responses properly with requestBinarySync", t => {
   const view = new Uint32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
   
   // Verify the 5 integers are correct
-  t.is(view[0], 1);         // First integer
-  t.is(view[1], 10);        // Second integer (contains newline byte)
-  t.is(view[2], 266);       // Third integer (contains newline byte)
-  t.is(view[3], 1000000);   // Fourth integer
+  t.is(view[0], 1);          // First integer
+  t.is(view[1], 10);         // Second integer (contains newline byte)
+  t.is(view[2], 266);        // Third integer (contains newline byte)
+  t.is(view[3], 1000000);    // Fourth integer
   t.is(view[4], 2147483647); // Fifth integer (max 32-bit signed int)
 
   // Ensure the channel is in a good state by making another request
