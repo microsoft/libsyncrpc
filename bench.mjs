@@ -6,7 +6,7 @@ const rustChannel = new SyncRpcChannel("cargo", ["run", "--release", "--example"
 const bench = new Bench();
 
 const smallMsg = '"hello"';
-const bigMsg = 'x'.repeat(10 * 1024 * 1024);
+const bigMsg = 'x'.repeat(1024 * 1024);
 
 bench
     // .add("baseline function call", () => {
