@@ -1,5 +1,6 @@
 import readline from "node:readline";
 
+// TODO: this needs to be updated for the new protocol.
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout

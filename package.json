@@ -17,6 +17,7 @@
   "license": "MIT",
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",
+    "@suchipi/dtsmd": "^1.1.0",
     "ava": "^6.0.1",
     "tinybench": "^2.9.0"
   },
@@ -27,13 +28,14 @@
     "node": ">= 10"
   },
   "scripts": {
-    "artifacts": "napi artifacts",
+    "artifacts": "npm run readme && napi artifacts",
     "bench": "npm run build && node ./bench.mjs",
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "prepublishOnly": "napi prepublish -t npm",
-    "test": "ava",
-    "universal": "napi universal",
+    "build": "npm run readme && napi build --platform --release",
+    "build:debug": "npm run readme && napi build --platform",
+    "prepublishOnly": "npm run readme && napi prepublish -t npm",
+    "readme": "node ./gen-readme.mjs",
+    "test": "npm run build:debug && ava",
+    "universal": "npm run readme && napi universal",
     "version": "napi version"
   }
 }

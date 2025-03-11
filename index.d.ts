@@ -8,31 +8,92 @@
  * to a child process and get a response over a line-based protocol,
  * including handling of JavaScript-side callbacks before the call completes.
  *
- * For details on the protocol, see the `README.md`.
+ * #### Protocol
+ *
+ * Requests follow a simple delimiter-and-size-based protocol that communicates
+ * with the child process through the child's stdin and stdout streams.
+ *
+ * All payloads are assumed to be pre-encoded JSON strings on either end--this API
+ * does not do any of its own JSON or even string encoding/decoding itself.  it.
+ *
+ * The child should handle the following messages through its `stdin`. In all
+ * below examples, `<payload-size>` is a 4-byte sequence representing an unsigned
+ * 32-bit integer. The following `<payload>` will be that many bytes long. Each
+ * message ends once the payload ends. The payload may be interpreted in
+ * different ways depending on the message, for example as raw binary data or a
+ * UTF-8 string. All other values (`<name>`, `<method>`, etc) are expected to be
+ * UTF-8-encoded bytes.
+ *
+ * * `request	<method>	<payload-size><payload>`: a request to the child with the
+ *   given raw byte `<payload>`, with `<method>` as the method name. The child should
+ *   send back any number of `call` messages and close the request with either a
+ *   `response` or `error` message.
+ * * `call-response	<name>	<payload-size><payload>`: a response to a `call`
+ *   message that the child previously sent. The `<payload>` is the return value
+ *   from invoking the JavaScript callback associated with it. If the callback
+ *   errors, `call-error` will be sent to the child.
+ * * `call-error	<name>	<payload-size><payload>`: informs the child that an error
+ *   occurred. The `<payload>` will be the binary representation of the stringified
+ *   error, as UTF-8 bytes, not necessarily in JSON format. The method linked to this
+ *   message will also throw an error after sending this message to its child and
+ *   terminate the request call.
+ *
+ * The channel handles the following messages from the child's `stdout`:
+ *
+ * * `response	<method>	<payload-size><payload>`: a response to a request that the
+ *   call was for. `<method>` MUST match the `request`
+ *   message's `<method>` argument.
+ * * `error	<method>	<payload-size><payload>`: a response that denotes some error
+ *   occurred while processing the request on the child side. The `<payload>` will
+ *   simply be the binary representation of the stringified error, as UTF-8 bytes,
+ *   not necessarily in JSON format. The method associated with this call will also
+ *   throw an error after receiving this message from the child.
+ * * `call	<name>	<payload-size><payload>`: a request to invoke a pre-registered
+ *   JavaScript callback (see `registerCallback`). `<name>` is the name of the
+ *   callback, and `<payload>` is an encoded UTF-8 string that the callback will be
+ *   called with. The child should then listen for `call-response` and `call-error`
+ *   messages.
+ *
  */
 export declare class SyncRpcChannel {
+  /**
+   * Constructs a new `SyncRpcChannel` by spawning a child process with the
+   * given `exe` executable, and a given set of `args`.
+   */
   constructor(exe: string, args: Array<string>)
-  requestBinarySync(method: string, payload: string): Buffer
   /**
    * Send a request to the child process and wait for a response. The method
    * will not return, synchronously, until a response is received or an error
    * occurs.
    *
+   * This method will take care of encoding and decoding the binary payload to
+   * and from a JS string automatically and suitable for smaller payloads.
+   *
    * For details on the protocol, refer to `README.md`.
    */
   requestSync(method: string, payload: string): string
   /**
+   * Send a request to the child process and wait for a response. The method
+   * will not return, synchronously, until a response is received or an error
+   * occurs.
+   *
+   * Unlike `requestSync`, this method will not do any of its own encoding or
+   * decoding of payload data. Everything will be as sent/received through the
+   * underlying protocol.
+   *
+   * For details on the protocol, refer to `README.md`.
+   */
+  requestBinarySync(method: string, payload: Uint8Array): Uint8Array
+  /**
    * Registers a JavaScript callback that the child can invoke before
-   * completing a request. The callback will receive a JSON-encoded string as
-   * its argument and should return a JSON-encoded string as its result.
+   * completing a request. The callback will receive a string name and a string
+   * payload as its arguments and should return a string as its result.
+   *
+   * There is currently no Uint8Array-only equivalent to this functionality.
    *
    * If the callback throws, an it will be handled appropriately by
    * `requestSync` and the child will be notified.
    */
-  registerCallback(name: string, cb: (arg0: string, arg1: string) => string): void
-  /**
-   * Does what it says on the tin. But you wouldn't do this to a _child_,
-   * would you? Just what kind of person are you?
-   */
-  murderInColdBlood(): void
+  registerCallback(name: string, callback: (name: string, payload: string) => string): void
+  close(): void
 }
