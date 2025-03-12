@@ -20,6 +20,9 @@ bench
     })
     .add('simple echo request to Rust child with a bigger 1MiB message', () => {
         rustChannel.requestSync("echo", bigMsg);
+    })
+    .add('simple empty binary request with 1MiB response', () => {
+        rustChannel.requestBinarySync("binary", "");
     });
 
 await bench.warmup(); // make results more reliable, ref: https://github.com/tinylibs/tinybench/pull/50
