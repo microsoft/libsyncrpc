@@ -1,5 +1,7 @@
 use std::io::{self, stdout, BufRead, BufReader, Lines, Stdin, Write};
 
+static BIG_ARR: [u8; 1024 * 1024] = [0; 1024 * 1024];
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut lines = io::BufReader::new(io::stdin()).lines();
   while let Some(line) = lines.next() {
@@ -11,32 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("response\techo\t{}", payload);
       }
       ["request-bin", "binary", _] => {
-        // Create a realistic binary payload with 32-bit integers
-        // One of the integers will have bytes that include a newline character (0x0A)
-
-        // We'll create a small binary array of 5 32-bit integers
-        // [1, 10, 266, 1000000, 2147483647]
-        // 10 decimal = 0x0000000A which includes a byte that's the newline character
-        // 266 decimal = 0x0000010A which includes a byte that's the newline character
-        let mut binary_data = Vec::new();
-
-        // Add integer 1 (0x00000001)
-        binary_data.extend_from_slice(&1_u32.to_le_bytes());
-
-        // Add integer 10 (0x0000000A) - contains a newline byte
-        binary_data.extend_from_slice(&10_u32.to_le_bytes());
-
-        // Add integer 266 (0x0000010A) - contains a newline byte
-        binary_data.extend_from_slice(&266_u32.to_le_bytes());
-
-        // Add integer 1000000 (0x000F4240)
-        binary_data.extend_from_slice(&1000000_u32.to_le_bytes());
-
-        // Add integer 2147483647 (0x7FFFFFFF) - max positive 32-bit signed integer
-        binary_data.extend_from_slice(&2147483647_u32.to_le_bytes());
-
         // Calculate the size of the binary data
-        let size = binary_data.len();
+        let size = BIG_ARR.len();
 
         // Write the binary response header
         let header = format!("response-bin\tbinary\t{}\n", size);
@@ -44,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         stdout.write_all(header.as_bytes())?;
 
         // Write the raw binary data directly to stdout
-        stdout.write_all(&binary_data)?;
+        stdout.write_all(&BIG_ARR)?;
 
         // Add the final newline
         stdout.write_all(b"\n")?;
