@@ -172,10 +172,9 @@ impl SyncRpcChannel {
     Ok(())
   }
 
-  /// Does what it says on the tin. But you wouldn't do this to a _child_,
-  /// would you? Just what kind of person are you?
+  /// Terminates the child process
   #[napi]
-  pub fn murder_in_cold_blood(&mut self) -> Result<()> {
+  pub fn terminate(&mut self) -> Result<()> {
     self.child.kill()?;
     Ok(())
   }

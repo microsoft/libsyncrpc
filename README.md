@@ -26,7 +26,7 @@ const buffer = channel.requestBinarySync("getRawData", "{}");
 console.log(buffer); // <Buffer 01 02 03 04 05 06 07 08 09 0a>
 
 // Remember to clean up after yourself!
-channel.murderInColdBlood();
+channel.terminate();
 ```
 
 ### Protocol

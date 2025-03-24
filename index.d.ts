@@ -31,8 +31,7 @@ export declare class SyncRpcChannel {
    */
   registerCallback(name: string, cb: (arg0: string, arg1: string) => string): void
   /**
-   * Does what it says on the tin. But you wouldn't do this to a _child_,
-   * would you? Just what kind of person are you?
+   * Terminates the child process
    */
-  murderInColdBlood(): void
+  terminate(): void
 }

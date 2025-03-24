@@ -6,7 +6,7 @@ test("should be able to send a message and get a response, synchronously.", t =>
   const channel = makeChannel();
   const response = channel.requestSync("echo", '"hello"');
   t.is(response, '"hello"');
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 test("should handle binary responses properly with requestBinarySync", t => {
@@ -32,7 +32,7 @@ test("should handle binary responses properly with requestBinarySync", t => {
   // Ensure the channel is in a good state by making another request
   channel.requestBinarySync("binary", "");
   
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 test("can register a callback that will be requested by the child process before returning", t => {
@@ -49,7 +49,7 @@ test("callbacks are handled in the order in which they're requested", t => {
   channel.registerCallback("three", (_name, _message) => "three");
   const response = channel.requestSync("concat", "");
   t.is(response, '"onetwothree"');
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 test("throws if the child responds with an error", t => {
@@ -57,7 +57,7 @@ test("throws if the child responds with an error", t => {
   t.throws(() => {
     channel.requestSync("error", "");
   }, { code: "GenericFailure", message: '"something went wrong"' });
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 test("throws if a callback throws", t => {
@@ -66,7 +66,7 @@ test("throws if a callback throws", t => {
   t.throws(() => {
     channel.requestSync("throw", "");
   }, { code: "GenericFailure", message: /callback error/ });
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 test("should combine callback handling with binary response", t => {
@@ -99,7 +99,7 @@ test("should combine callback handling with binary response", t => {
   // Verify the final integer is 42 (our magic number from the callback)
   t.is(view[5], 42);
   
-  channel.murderInColdBlood();
+  channel.terminate();
 });
 
 function makeChannel() {
