@@ -1,106 +1,85 @@
-use std::io::{self, stdout, BufRead, BufReader, Lines, Stdin, Write};
+use std::io::{self, BufReader, BufWriter, Stdin, Stdout};
+
+use libsyncrpc_connection::RpcConnection;
 
 static BIG_ARR: [u8; 1024 * 1024] = [0; 1024 * 1024];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-  let mut lines = io::BufReader::new(io::stdin()).lines();
-  while let Some(line) = lines.next() {
-    let line = line?;
-    let parts: Vec<&str> = line.split('\t').collect();
-    match &parts[..] {
-      ["request", "echo", payload] => {
+  let mut conn = RpcConnection::new(BufReader::new(io::stdin()), BufWriter::new(io::stdout()))?;
+  // eprintln!("Child initialized?");
+  while let Some((ty, name, payload)) = conn.read()? {
+    match [&ty[..], &name[..], &payload[..]] {
+      [b"request", b"echo", payload] => {
         // Just echo it
-        println!("response\techo\t{}", payload);
+        conn.write(b"response", b"echo", payload)?;
       }
-      ["request-bin", "binary", _] => {
-        // Calculate the size of the binary data
-        let size = BIG_ARR.len();
-
-        // Write the binary response header
-        let header = format!("response-bin\tbinary\t{}\n", size);
-        let mut stdout = stdout();
-        stdout.write_all(header.as_bytes())?;
-
-        // Write the raw binary data directly to stdout
-        stdout.write_all(&BIG_ARR)?;
-
-        // Add the final newline
-        stdout.write_all(b"\n")?;
-        stdout.flush()?;
+      [b"request", b"callback-echo", payload] => {
+        let res_payload = call(&mut conn, b"echo", payload)?;
+        conn.write(b"response", b"callback-echo", &res_payload)?;
       }
-      ["request-bin", "binary-with-callback", count_str] => {
-        // Parse the count for sequence length
-        let count = count_str.parse::<u32>().unwrap_or(5);
-
-        // Get a value from JavaScript callback to include in our binary response
-        let suffix_value_str = call(&mut lines, "getSuffix", "")?;
-        let suffix_value = suffix_value_str.parse::<u32>().unwrap_or(0);
-
-        // Create binary data with integers 1 to count followed by the suffix value
-        let mut binary_data = Vec::new();
-
-        // Add the sequence of integers
-        for i in 1..=count {
-          binary_data.extend_from_slice(&i.to_le_bytes());
+      [b"request", b"binary", _] => {
+        conn.write(b"response", b"binary", &BIG_ARR)?;
+      }
+      [b"request", b"empty", _] => {
+        conn.write(b"response", b"empty", b"")?;
+      }
+      [b"request", b"concat", _] => {
+        let one = call(&mut conn, b"one", b"1")?;
+        let two = call(&mut conn, b"two", b"2")?;
+        let three = call(&mut conn, b"three", b"3")?;
+        conn.write(b"response", b"concat", &[one, two, three].concat())?;
+      }
+      [b"request", b"error", _] => {
+        conn.write(b"error", b"error", b"\"something went wrong\"")?;
+      }
+      [b"request", b"throw", _] => {
+        conn.write(b"call", b"throw", b"")?;
+        let (ty, name, _) = conn.read()?.expect("No response?");
+        if &ty != b"call-error" || &name != b"throw" {
+          panic!("Unexpected response : {:?}\\t{:?}\\t...", ty, name);
         }
-
-        // Add the suffix value from the callback
-        binary_data.extend_from_slice(&suffix_value.to_le_bytes());
-
-        // Calculate the size of the binary data
-        let size = binary_data.len();
-
-        // Write the binary response header
-        let header = format!("response-bin\tbinary-with-callback\t{}\n", size);
-        let mut stdout = stdout();
-        stdout.write_all(header.as_bytes())?;
-
-        // Write the raw binary data directly to stdout
-        stdout.write_all(&binary_data)?;
-
-        // Add the final newline
-        stdout.write_all(b"\n")?;
-        stdout.flush()?;
-      }
-      ["request", "callback-echo", payload] => {
-        let res_payload = call(&mut lines, "echo", payload)?;
-        println!("response\tcallback-echo\t{res_payload}");
-      }
-      ["request", "concat", _] => {
-        let one = call(&mut lines, "one", "1")?;
-        let two = call(&mut lines, "two", "2")?;
-        let three = call(&mut lines, "three", "3")?;
-        println!("response\tconcat\t\"{one}{two}{three}\"");
-      }
-      ["request", "error", _] => {
-        println!("error\terror\t\"something went wrong\"");
-      }
-      ["request", "throw", _] => {
-        println!("call\tthrow\t\"\"");
-        let response = lines.next().expect("no response?")?;
-        let parts: Vec<&str> = response.split('\t').collect();
-        let ["call-error", "throw", _] = parts.as_slice() else {
-          panic!("Unexpected response : {:?}", parts);
-        };
         // Do nothing
       }
-      msg => {
-        panic!("Unexpected message : {:?}", msg);
+      [b"mmap", b"resize", _payload] => {
+        // eprintln!("wooooo. Stuff!");
+        #[cfg(feature = "mmap")]
+        {
+          let (size, _) = _payload.split_at(size_of::<usize>());
+          let size = usize::from_le_bytes(size.try_into().expect("Bad mmap size bytes."));
+          // eprintln!("Child got resize request. New size: {size}.");
+          conn.resize_mmap_ack(size)?;
+        }
+      }
+      [ty, name, _] => {
+        panic!(
+          "Unexpected message : {}\\t{}",
+          String::from_utf8_lossy(ty),
+          String::from_utf8_lossy(name)
+        );
       }
     }
   }
   Ok(())
 }
 
-fn call(lines: &mut Lines<BufReader<Stdin>>, name: &str, payload: &str) -> io::Result<String> {
-  println!("call\t{name}\t{payload}");
-  let response = lines.next().expect("no response?")?;
-  let parts: Vec<&str> = response.split('\t').collect();
-  let ["call-response", res_name, res_payload] = parts.as_slice() else {
-    panic!("Unexpected response : {:?}", parts);
-  };
-  if *res_name != name {
-    panic!("Unexpected response name : {res_name}");
+fn call(
+  conn: &mut RpcConnection<BufReader<Stdin>, BufWriter<Stdout>>,
+  name: &[u8],
+  payload: &[u8],
+) -> io::Result<Vec<u8>> {
+  conn.write(b"call", name, payload)?;
+  let (res_ty, res_name, res_payload) = conn.read()?.expect("Child expected a response but socket to parent closed.");
+  if res_ty != b"call-response" {
+    panic!(
+      "Expected a call-response but got {}",
+      String::from_utf8_lossy(&res_ty)
+    );
   }
-  Ok(res_payload.to_string())
+  if res_name != name {
+    panic!(
+      "Unexpected response name : {}",
+      String::from_utf8_lossy(&res_name)
+    );
+  }
+  Ok(res_payload)
 }
