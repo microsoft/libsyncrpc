@@ -34,7 +34,7 @@
     "build:debug": "npm run readme && napi build --platform",
     "prepublishOnly": "npm run readme && napi prepublish -t npm",
     "readme": "node ./gen-readme.mjs",
-    "test": "npm run build:debug && ava",
+    "test": "ava",
     "universal": "npm run readme && napi universal",
     "version": "napi version"
   }
