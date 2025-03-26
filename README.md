@@ -37,49 +37,13 @@ including handling of JavaScript-side callbacks before the call completes.
 
 #### Protocol
 
-Requests follow a simple delimiter-and-size-based protocol that communicates
-with the child process through the child's stdin and stdout streams.
+Requests follow a MessagePack-based "tuple"/array protocol with 3 items:
+`(<type>, <name>, <payload>)`. All items are binary arrays of 8-bit
+integers, including the `<type>` and `<name>`, to avoid unnecessary
+encoding/decoding at the protocol level.
 
-All payloads are assumed to be pre-encoded JSON strings on either end--this API
-does not do any of its own JSON or even string encoding/decoding itself. it.
-
-The child should handle the following messages through its `stdin`. In all
-below examples, `<payload-size>` is a 4-byte sequence representing an unsigned
-32-bit integer. The following `<payload>` will be that many bytes long. Each
-message ends once the payload ends. The payload may be interpreted in
-different ways depending on the message, for example as raw binary data or a
-UTF-8 string. All other values (`<name>`, `<method>`, etc) are expected to be
-UTF-8-encoded bytes.
-
-- `request	<method>	<payload-size><payload>`: a request to the child with the
-  given raw byte `<payload>`, with `<method>` as the method name. The child should
-  send back any number of `call` messages and close the request with either a
-  `response` or `error` message.
-- `call-response	<name>	<payload-size><payload>`: a response to a `call`
-  message that the child previously sent. The `<payload>` is the return value
-  from invoking the JavaScript callback associated with it. If the callback
-  errors, `call-error` will be sent to the child.
-- `call-error	<name>	<payload-size><payload>`: informs the child that an error
-  occurred. The `<payload>` will be the binary representation of the stringified
-  error, as UTF-8 bytes, not necessarily in JSON format. The method linked to this
-  message will also throw an error after sending this message to its child and
-  terminate the request call.
-
-The channel handles the following messages from the child's `stdout`:
-
-- `response	<method>	<payload-size><payload>`: a response to a request that the
-  call was for. `<method>` MUST match the `request`
-  message's `<method>` argument.
-- `error	<method>	<payload-size><payload>`: a response that denotes some error
-  occurred while processing the request on the child side. The `<payload>` will
-  simply be the binary representation of the stringified error, as UTF-8 bytes,
-  not necessarily in JSON format. The method associated with this call will also
-  throw an error after receiving this message from the child.
-- `call	<name>	<payload-size><payload>`: a request to invoke a pre-registered
-  JavaScript callback (see `registerCallback`). `<name>` is the name of the
-  callback, and `<payload>` is an encoded UTF-8 string that the callback will be
-  called with. The child should then listen for `call-response` and `call-error`
-  messages.
+For specific message types and their corresponding protocol behavior, please
+see `MessageType` below.
 
 ```ts
 declare class SyncRpcChannel {
@@ -112,8 +76,6 @@ occurs.
 This method will take care of encoding and decoding the binary payload to
 and from a JS string automatically and suitable for smaller payloads.
 
-For details on the protocol, refer to `README.md`.
-
 ```ts
 requestSync(method: string, payload: string): string;
 ```
@@ -128,8 +90,6 @@ Unlike `requestSync`, this method will not do any of its own encoding or
 decoding of payload data. Everything will be as sent/received through the
 underlying protocol.
 
-For details on the protocol, refer to `README.md`.
-
 ```ts
 requestBinarySync(method: string, payload: Uint8Array): Uint8Array;
 ```
@@ -140,7 +100,7 @@ Registers a JavaScript callback that the child can invoke before
 completing a request. The callback will receive a string name and a string
 payload as its arguments and should return a string as its result.
 
-There is currently no Uint8Array-only equivalent to this functionality.
+There is currently no `Uint8Array`-only equivalent to this functionality.
 
 If the callback throws, an it will be handled appropriately by
 `requestSync` and the child will be notified.

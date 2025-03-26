@@ -310,6 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { SyncRpcChannel } = nativeBinding
+const { SyncRpcChannel, MessageType } = nativeBinding
 
 module.exports.SyncRpcChannel = SyncRpcChannel
+module.exports.MessageType = MessageType
