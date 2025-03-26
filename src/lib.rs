@@ -246,6 +246,8 @@ impl TryFrom<u8> for MessageType {
     //
     // if (1..=std::mem::variant_count::<MessageType>()) {
     if (1..(MessageType::_UnusedPlaceholderVariant as u8)).contains(&value) {
+      // SAFETY: This is safe as long as the above holds true. It'll be fully
+      // safe once `variant_count` stabilizes.
       Ok(unsafe { std::mem::transmute::<u8, MessageType>(value) })
     } else {
       Err(format!("Invalid message type: {value}"))
