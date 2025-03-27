@@ -4,19 +4,21 @@
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "libsyncrpc",
-    "triples": {
-      "additional": [
-        "aarch64-apple-darwin",
-        "aarch64-unknown-linux-gnu",
-        "aarch64-unknown-linux-musl",
-        "aarch64-pc-windows-msvc"
-      ]
-    }
+    "binaryName": "libsyncrpc",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "aarch64-pc-windows-msvc",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
+    ]
   },
   "license": "MIT",
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.4",
+    "@napi-rs/cli": "^3.0.0-alpha.76",
     "@suchipi/dtsmd": "^1.1.0",
     "ava": "^6.0.1",
     "tinybench": "^2.9.0"
@@ -25,17 +27,16 @@
     "timeout": "3m"
   },
   "engines": {
-    "node": ">= 10"
+    "node": ">= 10.16.0 < 11 || >= 11.8.0 < 12 || >= 12.0.0"
   },
   "scripts": {
     "artifacts": "npm run readme && napi artifacts",
     "bench": "npm run build && node ./bench.mjs",
-    "build": "npm run readme && napi build --platform --release",
+    "build": "npm run readme && napi build --release --platform --strip",
     "build:debug": "npm run readme && napi build --platform",
     "prepublishOnly": "npm run readme && napi prepublish -t npm",
     "readme": "node ./gen-readme.mjs",
     "test": "ava",
-    "universal": "npm run readme && napi universal",
     "version": "napi version"
   }
 }

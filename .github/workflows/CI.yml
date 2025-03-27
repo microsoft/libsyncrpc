@@ -1,7 +1,6 @@
 name: CI
 env:
   DEBUG: napi:*
-  APP_NAME: libsyncrpc
   MACOSX_DEPLOYMENT_TARGET: '10.13'
 permissions:
   contents: write
@@ -27,44 +26,39 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: npm run build --target x86_64-apple-darwin
+            build: yarn build --platform --target x86_64-apple-darwin
           - host: windows-latest
-            build: npm run build --target x86_64-pc-windows-msvc
+            build: yarn build --platform
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
-            build: npm run build --target x86_64-unknown-linux-gnu
+            build: yarn build --platform --target x86_64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: yarn build --platform --target x86_64-unknown-linux-musl -x
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: npm run build --target aarch64-apple-darwin
+            build: yarn build --platform --target aarch64-apple-darwin
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: npm run build --target aarch64-unknown-linux-gnu
+            build: yarn build --platform --target aarch64-unknown-linux-gnu --use-napi-cross
           - host: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: |-
-              set -e &&
-              rustup target add aarch64-unknown-linux-musl &&
-              npm run build --target aarch64-unknown-linux-musl
+            build: yarn build --platform --target aarch64-unknown-linux-musl -x
           - host: windows-latest
             target: aarch64-pc-windows-msvc
-            build: npm run build --target aarch64-pc-windows-msvc
+            build: yarn build --platform --target aarch64-pc-windows-msvc
     name: stable - ${{ matrix.settings.target }} - node@20
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup node
         uses: actions/setup-node@v4
-        if: ${{ !matrix.settings.docker }}
         with:
           node-version: 20
-          cache: npm
+          cache: yarn
       - name: Install
         uses: dtolnay/rust-toolchain@stable
-        if: ${{ !matrix.settings.docker }}
         with:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
@@ -75,46 +69,53 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            ~/.napi-rs
             .cargo-cache
             target/
           key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
       - uses: goto-bus-stop/setup-zig@v2
-        if: ${{ matrix.settings.target == 'armv7-unknown-linux-gnueabihf' || matrix.settings.target == 'armv7-unknown-linux-musleabihf' }}
+        if: ${{ contains(matrix.settings.target, 'musl') }}
         with:
           version: 0.13.0
+      - name: Install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
       - name: Setup toolchain
         run: ${{ matrix.settings.setup }}
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Setup node x86
         if: matrix.settings.target == 'i686-pc-windows-msvc'
-        run: npm config set supportedArchitectures.cpu "ia32"
+        run: yarn config set supportedArchitectures.cpu "ia32"
         shell: bash
       - name: Install dependencies
-        run: npm install
+        run: yarn install
       - name: Setup node x86
         uses: actions/setup-node@v4
         if: matrix.settings.target == 'i686-pc-windows-msvc'
         with:
           node-version: 20
-          cache: npm
           architecture: x86
-      - name: Build in docker
-        uses: addnab/docker-run-action@v3
-        if: ${{ matrix.settings.docker }}
-        with:
-          image: ${{ matrix.settings.docker }}
-          options: '--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build'
-          run: ${{ matrix.settings.build }}
       - name: Build
         run: ${{ matrix.settings.build }}
-        if: ${{ !matrix.settings.docker }}
         shell: bash
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: matrix.settings.target != 'wasm32-wasi-preview1-threads'
         with:
           name: bindings-${{ matrix.settings.target }}
-          path: ${{ matrix.settings.target }}/${{ env.APP_NAME }}.*.node
+          path: '*.node'
+          if-no-files-found: error
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: matrix.settings.target == 'wasm32-wasi-preview1-threads'
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: '*.wasm'
           if-no-files-found: error
   test-macOS-windows-binding:
     name: Test bindings on ${{ matrix.settings.target }} - node@${{ matrix.node }}
@@ -126,8 +127,13 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
+            architecture: x64
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            architecture: arm64
           - host: windows-latest
             target: x86_64-pc-windows-msvc
+            architecture: x64
         node:
           - '18'
           - '20'
@@ -138,10 +144,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
-          architecture: x64
+          cache: yarn
+          architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
-        run: npm install
+        run: yarn install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -151,7 +157,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: npm test
+        run: yarn run test
   test-linux-x64-gnu-binding:
     name: Test bindings on Linux-x64-gnu - node@${{ matrix.node }}
     needs:
@@ -169,9 +175,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
+          cache: yarn
       - name: Install dependencies
-        run: npm install
+        run: yarn install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -181,7 +187,39 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim npm test
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim yarn run test
+  test-linux-x64-musl-binding:
+    name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '18'
+          - '20'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+      - name: Install dependencies
+        run: |
+          yarn config set supportedArchitectures.libc "musl"
+          yarn install
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-linux-musl
+          path: .
+      - name: List packages
+        run: ls -R .
+        shell: bash
+      - name: Test bindings
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine yarn run test
   test-linux-aarch64-gnu-binding:
     name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
     needs:
@@ -190,7 +228,6 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '18'
           - '20'
     runs-on: ubuntu-latest
     steps:
@@ -205,9 +242,9 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          npm config set supportedArchitectures.cpu "arm64"
-          npm config set supportedArchitectures.libc "glibc"
-          npm install
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "glibc"
+          yarn install
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -218,14 +255,17 @@ jobs:
         with:
           image: node:${{ matrix.node }}-slim
           options: '--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build'
-          run: |
-            set -e
-            npm test
-            ls -la
+          run: yarn run test
   test-linux-aarch64-musl-binding:
     name: Test bindings on aarch64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
       - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '18'
+          - '20'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -239,9 +279,9 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          npm config set supportedArchitectures.cpu "arm64"
-          npm config set supportedArchitectures.libc "musl"
-          npm install
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "musl"
+          yarn install
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -250,17 +290,16 @@ jobs:
       - name: Setup and run tests
         uses: addnab/docker-run-action@v3
         with:
-          image: node:lts-alpine
+          image: node:${{ matrix.node }}-alpine
           options: '--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build'
-          run: |
-            set -e
-            npm test
+          run: yarn run test
   publish:
     name: Publish
     runs-on: ubuntu-latest
     needs:
       - test-macOS-windows-binding
       - test-linux-x64-gnu-binding
+      - test-linux-x64-musl-binding
       - test-linux-aarch64-gnu-binding
       - test-linux-aarch64-musl-binding
     steps:
@@ -269,32 +308,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: yarn
+          registry-url: https://registry.npmjs.org
       - name: Install dependencies
-        run: npm install
+        run: yarn install
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Move artifacts
-        run: npm run artifacts
+        run: yarn artifacts
       - name: List packages
         run: ls -R ./npm
         shell: bash
       - name: Publish
         run: |
-          npm config set provenance true
           if git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+$";
           then
-            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-            npm publish --access public
+            npm publish --access public --provenance
           elif git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+";
           then
-            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-            npm publish --tag next --access public
+            npm publish --tag next --access public --provenance
           else
             echo "Not a release, skipping publish"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
