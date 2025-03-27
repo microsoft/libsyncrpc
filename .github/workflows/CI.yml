@@ -88,8 +88,18 @@ jobs:
         run: ${{ matrix.settings.setup }}
         if: ${{ matrix.settings.setup }}
         shell: bash
+      - name: Setup node x86
+        if: matrix.settings.target == 'i686-pc-windows-msvc'
+        run: npm config set cpu "ia32"
+        shell: bash
       - name: Install dependencies
         run: npm install
+      - name: Setup node x86
+        uses: actions/setup-node@v4
+        if: matrix.settings.target == 'i686-pc-windows-msvc'
+        with:
+          node-version: 20
+          architecture: x86
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
@@ -177,7 +187,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim npm run test
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim npm test
   test-linux-x64-musl-binding:
     name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
@@ -198,7 +208,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: |
-          npm install --libc musl
+          npm config set libc "musl"
+          npm install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -208,7 +219,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine npm run test
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine npm test
   test-linux-aarch64-gnu-binding:
     name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
     needs:
@@ -231,7 +242,9 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          npm install --cpu arm64 --libc glibc
+          npm config set cpu "arm64"
+          npm config set libc "glibc"
+          npm install
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -266,7 +279,9 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          npm install --cpu arm64 --libc musl
+          npm config set cpu "arm64"
+          npm config set libc "musl"
+          npm install
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
