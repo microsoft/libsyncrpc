@@ -26,28 +26,28 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: yarn build --platform --target x86_64-apple-darwin
+            build: npm run build --platform --target x86_64-apple-darwin
           - host: windows-latest
-            build: yarn build --platform
+            build: npm run build --platform
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: yarn build --platform --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: npm run build --platform --target x86_64-unknown-linux-gnu --use-napi-cross
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: yarn build --platform --target x86_64-unknown-linux-musl -x
+            build: npm run build --platform --target x86_64-unknown-linux-musl -x
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: yarn build --platform --target aarch64-apple-darwin
+            build: npm run build --platform --target aarch64-apple-darwin
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            build: yarn build --platform --target aarch64-unknown-linux-gnu --use-napi-cross
+            build: npm run build --platform --target aarch64-unknown-linux-gnu --use-napi-cross
           - host: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            build: yarn build --platform --target aarch64-unknown-linux-musl -x
+            build: npm run build --platform --target aarch64-unknown-linux-musl -x
           - host: windows-latest
             target: aarch64-pc-windows-msvc
-            build: yarn build --platform --target aarch64-pc-windows-msvc
+            build: npm run build --platform --target aarch64-pc-windows-msvc
     name: stable - ${{ matrix.settings.target }} - node@20
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -56,7 +56,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
+          cache: npm
       - name: Install
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -88,18 +88,8 @@ jobs:
         run: ${{ matrix.settings.setup }}
         if: ${{ matrix.settings.setup }}
         shell: bash
-      - name: Setup node x86
-        if: matrix.settings.target == 'i686-pc-windows-msvc'
-        run: yarn config set supportedArchitectures.cpu "ia32"
-        shell: bash
       - name: Install dependencies
-        run: yarn install
-      - name: Setup node x86
-        uses: actions/setup-node@v4
-        if: matrix.settings.target == 'i686-pc-windows-msvc'
-        with:
-          node-version: 20
-          architecture: x86
+        run: npm insatll install
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
@@ -144,10 +134,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
+          cache: npm
           architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
-        run: yarn install
+        run: npm install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -157,7 +147,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: yarn run test
+        run: npm test
   test-linux-x64-gnu-binding:
     name: Test bindings on Linux-x64-gnu - node@${{ matrix.node }}
     needs:
@@ -175,9 +165,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
+          cache: npm
       - name: Install dependencies
-        run: yarn install
+        run: npm install
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -187,7 +177,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim yarn run test
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim npm run test
   test-linux-x64-musl-binding:
     name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
@@ -205,11 +195,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
+          cache: npm
       - name: Install dependencies
         run: |
-          yarn config set supportedArchitectures.libc "musl"
-          yarn install
+          npm install --libc musl
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -219,7 +208,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine yarn run test
+        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine npm run test
   test-linux-aarch64-gnu-binding:
     name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
     needs:
@@ -242,9 +231,7 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          yarn config set supportedArchitectures.cpu "arm64"
-          yarn config set supportedArchitectures.libc "glibc"
-          yarn install
+          npm install --cpu arm64 --libc glibc
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -255,7 +242,7 @@ jobs:
         with:
           image: node:${{ matrix.node }}-slim
           options: '--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build'
-          run: yarn run test
+          run: npm test
   test-linux-aarch64-musl-binding:
     name: Test bindings on aarch64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
@@ -279,9 +266,7 @@ jobs:
         shell: bash
       - name: Install dependencies
         run: |
-          yarn config set supportedArchitectures.cpu "arm64"
-          yarn config set supportedArchitectures.libc "musl"
-          yarn install
+          npm install --cpu arm64 --libc musl
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -292,7 +277,7 @@ jobs:
         with:
           image: node:${{ matrix.node }}-alpine
           options: '--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build'
-          run: yarn run test
+          run: npm test
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -308,16 +293,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: yarn
-          registry-url: https://registry.npmjs.org
+          cache: npm
       - name: Install dependencies
-        run: yarn install
+        run: npm install
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Move artifacts
-        run: yarn artifacts
+        run: npm run artifacts
       - name: List packages
         run: ls -R ./npm
         shell: bash
