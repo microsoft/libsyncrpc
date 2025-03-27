@@ -59,7 +59,7 @@ export declare class SyncRpcChannel {
  * have an associated `<name>` and `<payload>`, which will both be arrays of
  * 8-bit integers (`Uint8Array`s).
  */
-export declare const enum MessageType {
+export declare enum MessageType {
   /**
    * A request to the child with the given raw byte `<payload>`, with
    * `<name>` as the method name. The child may send back any number of
