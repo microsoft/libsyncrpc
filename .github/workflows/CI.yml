@@ -89,7 +89,7 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: npm insatll install
+        run: npm install
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
