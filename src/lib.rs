@@ -97,7 +97,8 @@ impl SyncRpcChannel {
     self
       .conn
       .write(MessageType::Request as u8, method_bytes, payload)?;
-    while let Ok((ty, name, payload)) = self.conn.read() {
+    loop {
+      let (ty, name, payload) = self.conn.read()?;
       match ty.try_into().map_err(Error::from_reason)? {
         MessageType::Response => {
           if name == method_bytes {
@@ -127,7 +128,6 @@ impl SyncRpcChannel {
         }
       }
     }
-    Err(Error::from_reason("No response from child/unexpected EOF."))
   }
 
   /// Registers a JavaScript callback that the child can invoke before

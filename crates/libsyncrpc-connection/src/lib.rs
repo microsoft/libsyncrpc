@@ -28,7 +28,7 @@ impl<R: BufRead, W: Write> RpcConnection<R, W> {
     let r = &mut self.reader;
     assert_eq!(rmp::decode::read_array_len(r).map_err(to_io)?, 3, "Message components must be a valid 3-part messagepack array.");
     Ok((
-      rmp::decode::read_u8(r).map_err(to_io)?,
+      rmp::decode::read_int(r).map_err(to_io)?,
       self.read_bin()?,
       self.read_bin()?,
     ))

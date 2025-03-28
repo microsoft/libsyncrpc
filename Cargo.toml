@@ -19,6 +19,9 @@ default-features = false
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 features = ["napi4"]
 
+[features]
+used_linker = []
+
 [dependencies.napi-derive]
 version = "2"
 features = ["type-def"]

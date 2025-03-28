@@ -1,9 +1,8 @@
 import { Bench } from 'tinybench';
 import { SyncRpcChannel } from "./index.js";
-import { deepEqual } from "node:assert";
 
 const rustChannel = new SyncRpcChannel("cargo", ["run", "--release", "--example", "socket_child"])
-// const nodeChannel = new SyncRpcChannel("node", ["./echo.mjs"])
+const nodeChannel = new SyncRpcChannel("node", ["./echo.mjs"])
 const bench = new Bench();
 
 const ENCODER = new TextEncoder();
@@ -28,6 +27,18 @@ bench
     })
     .add('simple binary echo request to Rust child with an even bigger 1GiB message', () => {
         rustChannel.requestBinarySync("echo", hugeMsg);
+    })
+    .add('simple echo request to Node child', () => {
+        nodeChannel.requestSync("echo", smallStr);
+    })
+    .add('simple echo request to Node child with a bigger 1MiB message', () => {
+        nodeChannel.requestSync("echo", bigStr);
+    })
+    .add('simple binary echo request to Node child', () => {
+        nodeChannel.requestBinarySync("echo", smallMsg);
+    })
+    .add('simple binary echo request to Node child with a bigger 1MiB message', () => {
+        nodeChannel.requestBinarySync("echo", bigMsg);
     })
     .add('js noop baseline', () => {
         noopjs(smallMsg);
