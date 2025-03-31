@@ -20,8 +20,8 @@
   "devDependencies": {
     "@napi-rs/cli": "^3.0.0-alpha.76",
     "@suchipi/dtsmd": "^1.1.0",
-    "@types/msgpack": "^0.0.34",
     "ava": "^6.0.1",
+    "msgpackr": "^1.11.2",
     "tinybench": "^2.9.0"
   },
   "ava": {
@@ -39,8 +39,5 @@
     "readme": "node ./gen-readme.mjs",
     "test": "ava",
     "version": "napi version"
-  },
-  "dependencies": {
-    "msgpackr": "^1.11.2"
   }
 }
