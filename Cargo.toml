@@ -9,20 +9,26 @@ crate-type = ["cdylib", "rlib"]
 [workspace]
 members = ["./crates/*"]
 
-[dependencies]
-libsyncrpc-connection = { version = "0.0.0", path = "./crates/libsyncrpc-connection" }
+[dependencies.libsyncrpc-connection]
+version = "0.0.0"
+path = "./crates/libsyncrpc-connection"
 
-# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
-napi = { version = "2.16.12", features = ["napi4"] }
-napi-derive = "2.16.12"
+[dependencies.napi]
+version = "2"
+default-features = false
+# see https://nodejs.org/api/n-api.html#node-api-version-matrix
+features = ["napi4"]
 
 [features]
-noop = ["napi-derive/noop"]
 used_linker = []
 
+[dependencies.napi-derive]
+version = "2"
+features = ["type-def"]
+
 [build-dependencies]
-napi-build = "2.0.1"
+napi-build = "2"
 
 [profile.release]
 lto = true
-strip = true
+strip = "symbols"

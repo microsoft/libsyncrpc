@@ -1,4 +1,10 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from 'node:url';
+
 import test from 'ava'
+
+// Earlier versions of node@20 don't have `import.meta.dirname`.
+const __dirname = import.meta.dirname || dirname(fileURLToPath(import.meta.url));
 
 import { SyncRpcChannel } from '../index.js';
 
@@ -43,6 +49,10 @@ test("throws if a callback throws", t => {
   channel.close();
 });
 
+// function makeChannel() {
+//   return new SyncRpcChannel("cargo", ["run", "--release", "--example", "socket_child"]);
+// }
+
 function makeChannel() {
-  return new SyncRpcChannel("cargo", ["run", "--release", "--example", "socket_child"]);
+  return new SyncRpcChannel("node", [join(__dirname, "../echo.mjs")]);
 }
