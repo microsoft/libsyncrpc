@@ -35,6 +35,7 @@
     "bench": "npm run build && node ./bench.mjs",
     "build": "npm run readme && napi build --release --platform --strip --no-const-enum",
     "build:debug": "npm run readme && napi build --platform --no-const-enum",
+    "prepare": "napi build --release --platform --strip --no-const-enum",
     "prepublishOnly": "npm run readme && napi prepublish -t npm",
     "readme": "node ./gen-readme.mjs",
     "test": "ava",
