@@ -1,9 +1,6 @@
 {
   "name": "libsyncrpc-darwin-arm64",
   "version": "0.0.0",
-  "os": [
-    "darwin"
-  ],
   "cpu": [
     "arm64"
   ],
@@ -13,6 +10,9 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">= 10"
-  }
+    "node": ">= 10.16.0 < 11 || >= 11.8.0 < 12 || >= 12.0.0"
+  },
+  "os": [
+    "darwin"
+  ]
 }

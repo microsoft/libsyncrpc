@@ -1,12 +1,12 @@
 {
-  "name": "libsyncrpc-linux-arm64-gnu",
+  "name": "libsyncrpc-linux-x64-musl",
   "version": "0.0.0",
   "cpu": [
-    "arm64"
+    "x64"
   ],
-  "main": "libsyncrpc.linux-arm64-gnu.node",
+  "main": "libsyncrpc.linux-x64-musl.node",
   "files": [
-    "libsyncrpc.linux-arm64-gnu.node"
+    "libsyncrpc.linux-x64-musl.node"
   ],
   "license": "MIT",
   "engines": {
@@ -16,6 +16,6 @@
     "linux"
   ],
   "libc": [
-    "glibc"
+    "musl"
   ]
 }
