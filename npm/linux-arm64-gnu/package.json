@@ -1,5 +1,5 @@
 {
-  "name": "libsyncrpc-linux-arm64-gnu",
+  "name": "@typescript/libsyncrpc-linux-arm64-gnu",
   "version": "0.0.0",
   "cpu": [
     "arm64"

@@ -1,3 +1,3 @@
-# `libsyncrpc-linux-x64-musl`
+# `@typescript/libsyncrpc-linux-x64-musl`
 
-This is the **x86_64-unknown-linux-musl** binary for `libsyncrpc`
+This is the **x86_64-unknown-linux-musl** binary for `@typescript/libsyncrpc`
