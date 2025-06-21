@@ -1,5 +1,5 @@
 {
-  "name": "libsyncrpc-darwin-arm64",
+  "name": "@typescript/libsyncrpc-darwin-arm64",
   "version": "0.0.0",
   "cpu": [
     "arm64"

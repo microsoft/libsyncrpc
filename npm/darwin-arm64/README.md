@@ -1,3 +1,3 @@
-# `libsyncrpc-darwin-arm64`
+# `@typescript/libsyncrpc-darwin-arm64`
 
-This is the **aarch64-apple-darwin** binary for `libsyncrpc`
+This is the **aarch64-apple-darwin** binary for `@typescript/libsyncrpc`

@@ -1,5 +1,5 @@
 {
-  "name": "libsyncrpc-linux-x64-musl",
+  "name": "@typescript/libsyncrpc-linux-x64-musl",
   "version": "0.0.0",
   "cpu": [
     "x64"

@@ -1,3 +1,3 @@
-# `libsyncrpc-win32-arm64-msvc`
+# `@typescript/libsyncrpc-win32-arm64-msvc`
 
-This is the **aarch64-pc-windows-msvc** binary for `libsyncrpc`
+This is the **aarch64-pc-windows-msvc** binary for `@typescript/libsyncrpc`

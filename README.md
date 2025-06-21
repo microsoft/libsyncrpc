@@ -1,4 +1,4 @@
-# `libsyncrpc`
+# `@typescript/libsyncrpc`
 
 This is a `NAPI`-based NPM package that provides synchronous IPC/RPC using a
 simple line protocol. It uses [`NAPI-RS`](https://napi.rs) under the hood. See
@@ -7,7 +7,7 @@ their site for more details as needed.
 ## Example
 
 ```typescript
-import { SyncRpcChannel } from "libsyncrpc";
+import { SyncRpcChannel } from "@typescript/libsyncrpc";
 
 const channel = new SyncRpcChannel("node", "./myscript.js");
 const DECODER = new TextDecoder();
