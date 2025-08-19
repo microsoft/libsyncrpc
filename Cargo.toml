@@ -14,7 +14,7 @@ version = "0.0.0"
 path = "./crates/libsyncrpc-connection"
 
 [dependencies.napi]
-version = "2"
+version = "3"
 default-features = false
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 features = ["napi4"]
@@ -23,7 +23,7 @@ features = ["napi4"]
 used_linker = []
 
 [dependencies.napi-derive]
-version = "2"
+version = "3"
 features = ["type-def"]
 
 [build-dependencies]

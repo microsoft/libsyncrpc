@@ -18,7 +18,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.4",
+    "@napi-rs/cli": "^3.1.5",
     "@suchipi/dtsmd": "^1.2.0",
     "ava": "^6.4.1",
     "msgpackr": "^1.11.5",

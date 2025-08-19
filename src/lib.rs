@@ -5,7 +5,7 @@ use std::{
 };
 
 use napi::{
-  bindgen_prelude::{Function, FunctionRef, Result, Uint8Array},
+  bindgen_prelude::{FnArgs, Function, FunctionRef, Result, Uint8Array},
   Env, Error,
 };
 
@@ -14,7 +14,7 @@ use libsyncrpc_connection::RpcConnection;
 #[macro_use]
 extern crate napi_derive;
 
-pub type Callback = Function<'static, (String, String), String>;
+pub type Callback = Function<'static, FnArgs<(String, String)>, String>;
 
 /// A synchronous RPC channel that allows JavaScript to synchronously call out
 /// to a child process and get a response over a line-based protocol,
@@ -33,7 +33,7 @@ pub type Callback = Function<'static, (String, String), String>;
 pub struct SyncRpcChannel {
   child: Child,
   conn: RpcConnection<BufReader<ChildStdout>, BufWriter<ChildStdin>>,
-  callbacks: HashMap<String, FunctionRef<(String, String), String>>,
+  callbacks: HashMap<String, FunctionRef<FnArgs<(String, String)>, String>>,
 }
 
 #[napi]
@@ -161,7 +161,7 @@ impl SyncRpcChannel {
             "Failed to deserialize callback payload into a string: {e}"
           ))
         })?,
-      )) {
+      ).into()) {
         Ok(res) => {
           self.conn.write(
             MessageType::CallResponse as u8,
